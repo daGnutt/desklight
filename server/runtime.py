@@ -6,17 +6,24 @@ __author__ = "Gnutt Halvordsson"
 
 import listener
 import time
+import webhandler
+import webserver
 
 def __main():
     checkin = listener.listener('', 5007)
-    checkin.verbose = True
+    checkin.verbose = False
 
-    print("Starting Checkin Server")
+    webinterface = webserver.GServer( '', 5009, webhandler.do_GET, webhandler.do_POST )
+    print( "Starting Checkin Server" )
     checkin.start()
-    print("Server Started... Going to display mode")
+
+    print( "Starting Web Interface" )
+    webinterface.startserverasync()
+
+    print( "All Services started. Going to display mode" )
 
     while True:
-        time.sleep(1)
+        time.sleep(10)
         print(checkin.get_beacons())
         pass
 
