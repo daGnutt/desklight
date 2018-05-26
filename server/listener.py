@@ -4,12 +4,11 @@
 
 __author__ = "Gnutt Halvordsson"
 
+import binascii
 import socket
-import threading
 import struct
-import binascii
+import threading
 import time
-import binascii
 
 class listener:
     verbose = False
