@@ -13,6 +13,8 @@ def __main():
     checkin = listener.listener('', 5007)
     checkin.verbose = False
 
+    webhandler.getBeacons = checkin.get_beacons
+
     webinterface = webserver.GServer( '', 5009, webhandler.do_GET, webhandler.do_POST )
     print( "Starting Checkin Server" )
     checkin.start()

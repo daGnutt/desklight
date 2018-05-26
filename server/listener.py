@@ -76,7 +76,7 @@ class listener:
                 print("Wrong Beacontype")
             return False
 
-        macaddress = binascii.hexlify(macaddress)
+        macaddress = binascii.hexlify(macaddress).decode()
 
         if not macaddress in self.__beacons:
             self.__beacons[macaddress] = {}
