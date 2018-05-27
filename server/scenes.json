@@ -1,0 +1,31 @@
+{
+	"68c63aa78e4a": {
+		"lightsoff": [{
+				"first": 0,
+				"last": 179,
+				"color": [0,0,0]
+			}],
+		"softlight": [{
+				"first": 0,
+				"last": 179,
+				"color": [30, 30, 30]
+			}],
+		"brightwhite": [{
+			"first": 0,
+			"last": 66,
+			"color": [30, 30, 30]
+		},{
+			"first": 67,
+			"last": 90,
+			"color": [255,255,255]
+		},{
+			"first": 91,
+			"last": 156,
+			"color": [30, 30, 30]
+		},{
+			"first": 157,
+			"last": 179,
+			"color": [255,255,255]
+		}]
+	}
+}
