@@ -37,7 +37,7 @@ class listener:
             for mac in self.__beacons:
                 beacon = self.__beacons[mac]
                 since_seen = now - beacon['last_seen']
-                if since_seen > 30 and beacon[mac]['active']:
+                if since_seen > 30 and beacon['active']:
                     if self.verbose:
                         print("Beacon %s became inactive" % binascii.hexlify(mac))
                     beacon['active'] = False
