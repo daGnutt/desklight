@@ -185,10 +185,6 @@ ERequestStatus GHandleConnection( WiFiClient connection )
     byte mac[ MAC_LENGTH ];
     uint8_t mac_length = connection.read( mac, MAC_LENGTH );
 
-    DEV_SERIAL_PRINTLN( "Comparing following MAC Address" );
-    DEV_SERIAL_PRINTF( " Device  MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", device_mac[ 0 ], device_mac[ 1 ], device_mac[ 2 ], device_mac[ 3 ], device_mac[ 4 ], device_mac[ 5 ] );
-    DEV_SERIAL_PRINTF( " Payload MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", mac[ 0 ], mac[ 1 ], mac[ 2 ], mac[ 3 ], mac[ 4 ], mac[ 5 ] );
-
     if( device_mac[ 0 ] != mac[ 0 ]
      || device_mac[ 1 ] != mac[ 1 ]
      || device_mac[ 2 ] != mac[ 2 ]
