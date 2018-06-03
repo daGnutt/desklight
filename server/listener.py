@@ -5,6 +5,8 @@
 __author__ = "Gnutt Halvordsson"
 
 import binascii
+import json
+import signal
 import socket
 import struct
 import threading
@@ -12,11 +14,24 @@ import time
 
 class listener:
     verbose = False
+    __BEACONFILENAME = 'beacons.json'
+
     def __init__(self, serverip, serverport):
         self.__serverip = serverip
         self.__serverport = serverport
         self.__beacons = {}
         self.___verbose = False
+        #signal.signal(signal.SIGINT, self.__writebeacontofile())
+
+        try:
+         with open( self.__BEACONFILENAME, mode='r' ) as fp:
+           self__beacons = json.load( fp )
+        except FileNotFoundError:
+         pass
+        except json.decoder.JSONDecodeError:
+         self.__writebeacontofile()
+         pass
+
 
     def start(self):
         self.__startasyncserver()
@@ -24,6 +39,13 @@ class listener:
 
     def get_beacons(self):
         return self.__beacons
+
+    def setpixels(self, mac, newpixelvalues):
+      pass
+
+    def __writebeacontofile(self):
+      with open( self.__BEACONFILENAME, mode='w' ) as fp:
+        json.dump(self.__beacons, fp) 
 
     def __startcheckstale(self):
         stale_thread = threading.Thread(
@@ -64,7 +86,7 @@ class listener:
         if self.verbose:
             print("Parsing Data")
         try:
-            (beacontype, macaddress, tcp_port) = struct.unpack(">2s6sH", data)
+            (beacontype, macaddress, tcp_port, scenenumber) = struct.unpack(">2s6sHB", data)
         except struct.error:
             if self.verbose:
                 print("Bad Data from %s:%s" % (sender[0], sender[1]))
@@ -81,11 +103,13 @@ class listener:
         if not macaddress in self.__beacons:
             self.__beacons[macaddress] = {}
 
+
         self.__beacons[macaddress].update({
             "last_seen": int(time.time()),
             "ip_address": sender[0],
             "tcp_port": tcp_port,
-            "active": True
+            "active": True,
+	    "scenecounter": scenenumber
         })
 
         if self.verbose:

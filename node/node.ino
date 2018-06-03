@@ -105,18 +105,19 @@ void SendHeartbeat()
   byte mac[ 6 ];
   WiFi.macAddress( mac );
 
-  message[0] = 'D';
-  message[1] = 'L';
-  message[2] = mac[0];
-  message[3] = mac[1];
-  message[4] = mac[2];
-  message[5] = mac[3];
-  message[6] = mac[4];
-  message[7] = mac[5];
-  message[8] = SERVER_PORT >> 8;
-  message[9] = SERVER_PORT;
+  message[0]  = 'D';
+  message[1]  = 'L';
+  message[2]  = mac[0];
+  message[3]  = mac[1];
+  message[4]  = mac[2];
+  message[5]  = mac[3];
+  message[6]  = mac[4];
+  message[7]  = mac[5];
+  message[8]  = SERVER_PORT >> 8;
+  message[9]  = SERVER_PORT;
+  message[10] = scenecounter;
 
-  const int len = 10;
+  const int len = 11;
 
   GHeartbeatSocket.beginPacket( CHECKIN_IP, CHECKIN_PORT );
   GHeartbeatSocket.write( message, len );
@@ -124,6 +125,7 @@ void SendHeartbeat()
 }
 
 Timer GHeartbeatTimer;
+uint8_t scenecounter;
 
 void setup() {
 #if BOARD_DEVELOPMENT
@@ -155,6 +157,8 @@ void setup() {
   GHeartbeatTimer.Start( HEARTBEAT_INTERVAL, true );
   GPixels.begin();
   GPixels.show();
+
+  scenecounter = 0;
 }
 
 
@@ -217,6 +221,7 @@ ERequestStatus GHandleConnection( WiFiClient connection )
       GPixels.setPixelColor( pixelPayload[0], pixelPayload[1], pixelPayload[2], pixelPayload[3] );    
     }
     GPixels.show();
+    scenecounter++;
   }
   return ERequestStatus::RS_Success;
 }

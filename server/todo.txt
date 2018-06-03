@@ -1,0 +1,4 @@
+o Store value on node from server, that is included in heartbeats. That way a restarted node, regains it's scene
+* Store active scene per node on server
+* Add function to change brightness on node
+o Add PIN-in to change brightness on node?

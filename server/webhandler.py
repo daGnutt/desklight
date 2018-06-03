@@ -33,6 +33,14 @@ def do_POST(request):
     POSTsetscene(request)
     return
 
+  if request.path == '/lightsoff':
+      POSTsetlights(request)
+      return
+
+  if request.path == '/lightson':
+      POSTsetlights(request)
+      return
+
   request.send_response_only(500)
   request.end_headers()
   request.wfile.write('NOT IMPLEMTEND'.encode())
