@@ -30,7 +30,9 @@ class Listener:
 
     def __startcheckstale(self):
         stale_thread = threading.Thread(
-            name='StaleChecker', target=self.__checkstale, daemon=True
+            name='StaleChecker',
+            target=self.__checkstale,
+            daemon=True
         )
         stale_thread.start()
 
@@ -53,7 +55,9 @@ class Listener:
 
     def __startasyncserver(self):
         udp_thread = threading.Thread(
-            name='UDPserver', target=self.__startsyncserver, daemon=True)
+            name='UDPserver',
+            target=self.__startsyncserver,
+            daemon=True)
         udp_thread.start()
 
     def __startsyncserver(self):

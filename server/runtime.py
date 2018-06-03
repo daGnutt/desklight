@@ -13,12 +13,11 @@ import webserver
 def __main():
     checkin = listener.Listener('', 5007)
     checkin.verbose = False
+    print('Starting Checkin Server')
+    checkin.start()
 
     webhandler.GET_BEACONS = checkin.get_beacons
-
     webinterface = webserver.GServer('', 5009, webhandler.do_get, webhandler.do_post)
-    print("Starting Checkin Server")
-    checkin.start()
 
     print("Starting Web Interface")
     webinterface.startserverasync()
