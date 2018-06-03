@@ -10,7 +10,8 @@ import struct
 import threading
 import time
 
-class listener:
+class Listener:
+    """Listens for beacons and handles their checkin-state."""
     verbose = False
     def __init__(self, serverip, serverport):
         self.__serverip = serverip
@@ -19,10 +20,12 @@ class listener:
         self.___verbose = False
 
     def start(self):
+        """Initiates the services to listen, and handle staleness"""
         self.__startasyncserver()
         self.__startcheckstale()
 
     def get_beacons(self):
+        """Returns a dictionary of all beacons and their state"""
         return self.__beacons
 
     def __startcheckstale(self):
@@ -45,7 +48,7 @@ class listener:
                 if since_seen > 60*5:
                     if self.verbose:
                         print("Beacon %s considered dead" % binascii.hexlify(mac))
-                    del(beacon)
+                    del beacon
             time.sleep(10)
 
     def __startasyncserver(self):

@@ -12,146 +12,155 @@ import struct
 import threading
 import urllib
 
-getBeacons = None
-beaconbasescene = {}
+GET_BEACONS = do_get
 
-def do_GET(request):
-  parsedurl = urllib.parse.urlparse( request.path )
+def do_get(request):
+    """Parses and handles all GET-requests"""
+    parsedurl = urllib.parse.urlparse(request.path)
 
-  if parsedurl.path == '/nodes':
-    GETBeacons(request)
+    if parsedurl.path == '/nodes':
+        get_beacons(request)
+        return
+
+    if parsedurl.path == '/scenes':
+        get_scenes(request)
+        return
+
+    servefile(request)
     return
 
-  if parsedurl.path == '/scenes':
-    GETScenes(request)
+def do_post(request):
+    """Parses and handles all POST-requests"""
+    if request.path == '/setscene':
+        post_setscene(request)
+        return
+
+    send_response(request, 500, 'NOT IMPLEMENTED')
+
+def get_beacons(request):
+    """Retrives beacons from the callback getBeacons and sends it to the api client"""
+    send_response(request, 200, json.dumps(GET_BEACONS()))
     return
 
-  servefile(request)
+def get_scenes(request):
+    """Reads the scenes from the JSON and returns it to the api client."""
+    parsedurl = urllib.parse.urlparse(request.path)
+    querystring = urllib.parse.parse_qs(parsedurl.query)
 
-def do_POST(request):
-  if request.path == '/setscene':
-    POSTsetscene(request)
+    if 'node' not in querystring:
+        send_response(request, 500, 'Missing node')
+        return
+
+    with open("scenes.json", mode="r") as file_pointer:
+        scenes = file_pointer.read()
+
+    scenes = json.loads(scenes)
+    if querystring['node'][0] not in scenes:
+        send_response(request, 500, 'Node not found')
+        return
+
+    send_response(request, 200, json.dumps(scenes[querystring['node'][0]]))
     return
-
-  request.send_response_only(500)
-  request.end_headers()
-  request.wfile.write('NOT IMPLEMTEND'.encode())
-
-def GETBeacons(request):
-  request.send_response_only(200)
-  request.end_headers()
-  data = json.dumps( getBeacons() )
-  request.wfile.write( data.encode() )
-  return
-
-def GETScenes(request):
-  parsedurl = urllib.parse.urlparse( request.path )
-  querystring = urllib.parse.parse_qs( parsedurl.query )
-
-  if 'node' not in querystring:
-    request.send_response_only(501)
-    request.end_headers()
-    request.wfile.write("Missing node".encode())
-    return
-
-  with open("scenes.json", mode="r") as fp:
-    scenes = fp.read()
-
-  scenes = json.loads( scenes )
-  if querystring['node'][0] not in scenes:
-    request.send_response_only(500)
-    request.end_headers()
-    request.wfile.write( 'Node not found'.encode() )
-    return
-
-  request.send_response_only(200)
-  request.end_headers()
-  request.wfile.write( json.dumps( scenes[querystring['node'][0]] ).encode() )
-  return
 
 def servefile(request):
-  if request.path == '/':
-    request.path = '/index.html'
+    """Servers the file that was asked for in the request."""
+    if request.path == '/':
+        request.path = '/index.html'
 
-  request.path = 'webclient%s' % request.path
+    request.path = 'webclient%s' % request.path
 
-  if os.path.isfile( request.path ):
-    request.send_response_only(200)
+    if os.path.isfile(request.path):
+        request.send_response_only(200)
+        request.end_headers()
+        with open(request.path, mode='rb') as file_pointer:
+            request.wfile.write(file_pointer.read())
+        return
+
+    request.send_response_only(404)
     request.end_headers()
-    with open( request.path, mode='rb' ) as fp:
-      request.wfile.write( fp.read() )
     return
 
-  request.send_response_only(404)
-  request.end_headers()
-  return
+def post_setscene(request):
+    """Sends the supplied scene to the supplied node."""
+    postdata = request.rfile.read(int(request.headers['content-length']))
+    try:
+        parsed = json.loads(postdata.decode())
+    except json.decoder.JSONDecodeError:
+        request.send_response_only(500)
+        request.end_headers()
+        request.wfile.write('Could not parse JSON data'.encode())
+        return
 
-def POSTsetscene( request ):
-  postdata = request.rfile.read(int(request.headers['content-length']))
-  try:
-    parsed = json.loads( postdata.decode() )
-  except json.decoder.JSONDecodeError:
-    request.send_response_only(500)
-    request.end_headers()
-    request.wfile.write( 'Could not parse JSON data'.encode() )
+    with open('scenes.json', mode='r') as file_pointer:
+        scenes = json.load(file_pointer)
+
+    nodescenes = scenes[parsed['node']]
+    if not parsed['scene'] in nodescenes:
+        send_response(request, 500, 'Supplied scene is not available for node.')
+        return
+
+    nodes = GET_BEACONS()
+    try:
+        node = nodes[parsed['node']]
+    except KeyError:
+        send_response(request, 500, 'Supplied node has not checked in.')
+        return
+
+    pixelvalues = parsepayload(nodescenes[parsed['scene']])
+    binaryvalue = buildpayload(parsed['node'], pixelvalues)
+
+    result = send_tcp(node['ip_address'], node['tcp_port'], binaryvalue)
+    result = int.from_bytes(result, byteorder='big', signed=False)
+
+    send_response(request, 200, '%d' % result)
     return
 
-  with open('scenes.json', mode='r') as fp:
-    scenes = json.load( fp )
-
-  nodescenes = scenes[ parsed[ 'node' ] ]
-  if not parsed['scene'] in nodescenes:
-    request.send_response_only(500)
+def send_response(request, statuscode, message, optional_headers=None):
+    """Sends a response to the request"""
+    request.send_response_only(statuscode)
+    if optional_headers:
+        for header in optional_headers:
+            request.send_header(header)
     request.end_headers()
-    request.wfile.write( 'Supplied scene is not available for node'.encode() )
+    request.wfile.write(message.encode())
+
+def parsepayload(lightranges):
+    """Takes the data from `lightranges` and splits it into individual pixelvalues."""
+    alldata = {}
+    for lightrange in lightranges:
+        for pixelpos in range(lightrange['first'], lightrange['last']+1):
+            alldata[pixelpos] = [lightrange['color'][0],
+                                 lightrange['color'][1],
+                                 lightrange['color'][2]]
+
+    return alldata
+
+def buildpayload(macaddress, pixelvalues):
+    """Generates the payload based on a macaddress and all the pixelvalues"""
+    payload = binascii.unhexlify(macaddress)
+    for key in pixelvalues.keys():
+        payload = payload + struct.pack(
+            "!BBBB",
+            key,
+            pixelvalues[key][0],
+            pixelvalues[key][1],
+            pixelvalues[key][2])
+
+    return payload
+
+def send_tcp_async(ip_address, port, payload):
+    """Initiates a separeate deamon-thread for seding a tcp-stream"""
+    sendthread = threading.Thread(target=send_tcp, daemon=True, args=(ip_address, port, payload))
+    sendthread.start()
     return
 
-  nodes = getBeacons()
-  try: 
-    node = nodes[ parsed[ 'node' ] ]
-  except KeyError:
-    request.send_response_only(500)
-    request.end_headers()
-    request.wfile.write( 'Supplied node has not checked in'.encode() )
-    return
+def send_tcp(ip_address, port, payload):
+    """Sends the supplied payload to the node"""
+    connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    connection.settimeout(1)
+    connection.connect((ip_address, port))
+    connection.send(payload)
+    response = connection.recv(1024)
+    connection.close()
 
-  pixelvalues = parsepayload( nodescenes[parsed['scene']] )
-  binaryvalue = buildpayload( parsed[ 'node' ], pixelvalues )
-
-  result = sendTCP( node[ 'ip_address' ], node[ 'tcp_port' ], binaryvalue )
-  result = int.from_bytes( result, byteorder='big', signed=False )
-
-  request.send_response_only( 200 )
-  request.end_headers()
-  request.wfile.write( ('%d' % result).encode() )
-  return
-
-def parsepayload( lightranges ):
-  alldata = {}
-  for lightrange in lightranges:
-    for pixelpos in range(lightrange['first'], lightrange['last']+1):
-      alldata[pixelpos] = [lightrange['color'][0], lightrange['color'][1], lightrange['color'][2]]
-
-  return alldata
-
-def buildpayload( macaddress, pixelvalues ):
-  payload = binascii.unhexlify( macaddress )
-  for key in pixelvalues.keys():
-    payload = payload + struct.pack("!BBBB", key, pixelvalues[key][0], pixelvalues[key][1], pixelvalues[key][2])
-
-  return payload
-
-def sendTCPasync( ip, port, payload ):
-  sendthread = threading.Thread( target=sendTCP, daemon=True, args=( ip, port, payload ) )
-  sendthread.run()
-  return
-
-def sendTCP( ip, port, payload ):
-  connection = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  connection.settimeout(1)
-  connection.connect((ip, port))
-  connection.send(payload)
-  response = connection.recv(1024)
-  connection.close()
-
-  return response
+    return response
