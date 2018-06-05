@@ -128,7 +128,6 @@ ERequestStatus GHandleConnection( WiFiClient connection )
      }
     while( connection.available() )
     {
-      startOfConnection = millis();
       while( connection.available() < BYTESPERPIXEL )
       {
         if( connection.status() == 0 )
@@ -137,8 +136,7 @@ ERequestStatus GHandleConnection( WiFiClient connection )
         }
                 
         delay( 1 );
-        currentTime = millis();
-        if( currentTime - startOfConnection > 1000 )
+        if( millis() - startOfConnection > 1000 )
         {
          return ERequestStatus::RS_Timeout;
         }
@@ -162,4 +160,3 @@ void loop() {
     connection.stop();
   }
 }
-
