@@ -31,6 +31,9 @@ enum class ERequestStatus : unsigned int {
   RS_Timeout
 };
 
+Timer GHeartbeatTimer;
+uint8_t scenecounter;
+
 void SendHeartbeat()
 {
   char message[ 128 ];
@@ -55,9 +58,6 @@ void SendHeartbeat()
   GHeartbeatSocket.write( message, len );
   GHeartbeatSocket.endPacket();
 }
-
-Timer GHeartbeatTimer;
-uint8_t scenecounter;
 
 void setup() {
 #if BOARD_DEVELOPMENT
