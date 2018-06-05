@@ -12,7 +12,8 @@ import struct
 import threading
 import time
 
-class listener:
+class Listener:
+    """Listens for beacons and handles their checkin-state."""
     verbose = False
     __BEACONFILENAME = 'beacons.json'
 
@@ -34,10 +35,12 @@ class listener:
 
 
     def start(self):
+        """Initiates the services to listen, and handle staleness"""
         self.__startasyncserver()
         self.__startcheckstale()
 
     def get_beacons(self):
+        """Returns a dictionary of all beacons and their state"""
         return self.__beacons
 
     def setpixels(self, mac, newpixelvalues):
@@ -49,7 +52,9 @@ class listener:
 
     def __startcheckstale(self):
         stale_thread = threading.Thread(
-            name='StaleChecker', target=self.__checkstale, daemon=True
+            name='StaleChecker',
+            target=self.__checkstale,
+            daemon=True
         )
         stale_thread.start()
 
@@ -67,12 +72,14 @@ class listener:
                 if since_seen > 60*5:
                     if self.verbose:
                         print("Beacon %s considered dead" % binascii.hexlify(mac))
-                    del(beacon)
+                    del beacon
             time.sleep(10)
 
     def __startasyncserver(self):
         udp_thread = threading.Thread(
-            name='UDPserver', target=self.__startsyncserver, daemon=True)
+            name='UDPserver',
+            target=self.__startsyncserver,
+            daemon=True)
         udp_thread.start()
 
     def __startsyncserver(self):
