@@ -6,7 +6,6 @@ __author__ = "Gnutt Halvordsson"
 
 import binascii
 import json
-import signal
 import socket
 import struct
 import threading
@@ -22,17 +21,14 @@ class Listener:
         self.__serverport = serverport
         self.__beacons = {}
         self.___verbose = False
-        #signal.signal(signal.SIGINT, self.__writebeacontofile())
 
         try:
-         with open( self.__BEACONFILENAME, mode='r' ) as fp:
-           self__beacons = json.load( fp )
+            with open(self.__BEACONFILENAME, mode='r') as file_pointer:
+                self.__beacons = json.load(file_pointer)
         except FileNotFoundError:
-         pass
+            pass
         except json.decoder.JSONDecodeError:
-         self.__writebeacontofile()
-         pass
-
+            self.__writebeacontofile()
 
     def start(self):
         """Initiates the services to listen, and handle staleness"""
@@ -43,12 +39,10 @@ class Listener:
         """Returns a dictionary of all beacons and their state"""
         return self.__beacons
 
-    def setpixels(self, mac, newpixelvalues):
-      pass
-
     def __writebeacontofile(self):
-      with open( self.__BEACONFILENAME, mode='w' ) as fp:
-        json.dump(self.__beacons, fp) 
+        """Stores the beacons as a file."""
+        with open(self.__BEACONFILENAME, mode='w') as file_pointer:
+            json.dump(self.__beacons, file_pointer)
 
     def __startcheckstale(self):
         stale_thread = threading.Thread(
@@ -116,7 +110,7 @@ class Listener:
             "ip_address": sender[0],
             "tcp_port": tcp_port,
             "active": True,
-	    "scenecounter": scenenumber
+            "scenecounter": scenenumber
         })
 
         if self.verbose:

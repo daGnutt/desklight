@@ -12,7 +12,7 @@ import struct
 import threading
 import urllib
 
-GET_BEACONS = do_get
+GET_BEACONS = None
 
 def do_get(request):
     """Parses and handles all GET-requests"""
@@ -39,7 +39,7 @@ def do_post(request):
 
 def get_beacons(request):
     """Retrives beacons from the callback getBeacons and sends it to the api client"""
-    send_response(request, 200, json.dumps(GET_BEACONS()))
+    send_response(request, 200, json.dumps(GET_BEACONS())) #pylint: disable=E1102
     return
 
 def get_scenes(request):
@@ -86,20 +86,22 @@ def post_setscene(request):
     try:
         parsed = json.loads(postdata.decode())
     except json.decoder.JSONDecodeError:
-        request.send_response_only(500)
-        request.end_headers()
-        request.wfile.write('Could not parse JSON data'.encode())
+        send_response(request, 500, 'Could not parse incoming JSON data')
         return
 
-    with open('scenes.json', mode='r') as file_pointer:
-        scenes = json.load(file_pointer)
+    try:
+        with open('scenes.json', mode='r') as file_pointer:
+            scenes = json.load(file_pointer)
+    except (json.decoder.JSONDecodeError, FileNotFoundError):
+        send_response(request, 500, 'Could not read scenes')
+        return
 
     nodescenes = scenes[parsed['node']]
     if not parsed['scene'] in nodescenes:
         send_response(request, 500, 'Supplied scene is not available for node.')
         return
 
-    nodes = GET_BEACONS()
+    nodes = GET_BEACONS() #pylint: disable=E1102
     try:
         node = nodes[parsed['node']]
     except KeyError:
