@@ -34,6 +34,10 @@ def do_post(request):
     if request.path == '/setscene':
         post_setscene(request)
         return
+    
+    if request.path == '/setbrightness':
+        post_setbrightness(request)
+        return
 
     send_response(request, 500, 'NOT IMPLEMENTED')
 
@@ -86,7 +90,7 @@ def post_setscene(request):
     try:
         parsed = json.loads(postdata.decode())
     except json.decoder.JSONDecodeError:
-        send_response(request, 500, 'Could not parse incoming JSON data')
+        send_response(request, 500, 'Could not parse incoming JSON data.')
         return
 
     try:
@@ -117,6 +121,32 @@ def post_setscene(request):
     send_response(request, 200, '%d' % result)
     return
 
+def post_setbrightness(request):
+    """Sets the brightness on the supplied node."""
+    postdata = request.rfile.read(int(request.headers['content-length']))
+    try:
+        parsed = json.loads(postdata.decode())
+    except json.decoder.JSONDecodeError:
+        send_response(request, 500, 'Could not parse incoming JSON data.')
+        return
+
+    nodes = GET_BEACONS() #pylint: disable=E1102
+    try:
+        node = nodes[parsed['node']]
+    except KeyError:
+        send_response(request, 500, 'Supplied node has not checked in.')
+        return
+    payload  = binascii.unhexlify(parsed['node'])
+    payload += b'B'
+    payload += bytes([parsed['brightness']])
+
+    print(binascii.hexlify(payload))
+    result = send_tcp(node['ip_address'], node['tcp_port'], payload)
+    result = int.from_bytes(result, byteorder='big', signed=False)
+
+    send_response(request, 200, '%d' % result)
+    return
+
 def send_response(request, statuscode, message, optional_headers=None):
     """Sends a response to the request"""
     request.send_response_only(statuscode)
@@ -140,6 +170,7 @@ def parsepayload(lightranges):
 def buildpayload(macaddress, pixelvalues):
     """Generates the payload based on a macaddress and all the pixelvalues"""
     payload = binascii.unhexlify(macaddress)
+    payload = payload + b'P'
     for key in pixelvalues.keys():
         payload = payload + struct.pack(
             "!BBBB",
