@@ -140,7 +140,6 @@ def post_setbrightness(request):
     payload += b'B'
     payload += bytes([parsed['brightness']])
 
-    print(binascii.hexlify(payload))
     result = send_tcp(node['ip_address'], node['tcp_port'], payload)
     result = int.from_bytes(result, byteorder='big', signed=False)
 
