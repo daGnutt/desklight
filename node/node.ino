@@ -151,7 +151,7 @@ ERequestStatus setBrightness( WiFiClient connection )
   byte brightnessPayload[ 1 ];
   uint8_t brightnesslength = connection.read( brightnessPayload, 1 );
 
-  DEV_SERIAL_PRINTF( "New Brightness is %d", brightnessPayload );
+  DEV_SERIAL_PRINTF( "New Brightness is %d\n", brightnessPayload[0] );
 
   GPixels.setBrightness( brightnessPayload[0] );
   GPixels.show();

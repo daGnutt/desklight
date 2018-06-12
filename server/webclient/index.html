@@ -11,62 +11,9 @@
     </header>
     <main>
         <h2>Choose Scene</h2>
-        <button>Create new Scene</button>
-        <ul id="scenelist">
-            <li>
-                <input type="radio" name="sceneselector" value="brigthwhite" /> brightwhite
-                <button>Edit</button>
-                <button>Delete</button>
-            </li>
-            <li>
-                <input type="radio" name="sceneselector" value="calmwhite" /> calmwhite
-                <button>Edit</button>
-                <button>Delete</button>
-            </li>
-            <li>
-                <input type="radio" name="sceneselector" value="off" /> off
-                <button>Edit</button>
-                <button>Delete</button>
-            </li>
-        </ul>
-        <button id="btnPushScene">Push Scene</button><br />
-        <label for="brightness">Brightness</label>
-        <input type="range" min="0" max="255" value="255" id="rngBrightness"><br />
-        <button id="btnPushBrightness">Push Brightness</button>
-    </main>
-    <div id="modifyscene">
-        <h2>Sceneeditor</h2>
-        <input type="text" value="brightwhite" />
-        <ul>
-            <li>0-66: RGB(30,30,30)
-                <button>Edit</button>
-                <button>Delete</button>
-            </li>
-            <li>67-90: RGB(255,255,255)
-                <button>Edit</button>
-                <button>Delete</button>
-            </li>
-            <li>91-156: RGB(30,30,30)
-                <button>Edit</button>
-                <button>Delete</button>
-            </li>
-            <li>157-179: RGB(255,255,255)
-                <button>Edit</button>
-                <button>Delete</button>
-            </li>
-        </ul>
-        <p>
-            <button>New Range</button>
-        </p>
-        <p>
-            <input type="number" size="3" min="0" max="255" name="firstpixel">
-            <input type="number" size="3" min="0" max="255" name="lastpixel">
-	    <input type="color" name="colorvalue" />
-            <button>Add / Save</button>
-        </p>
-        <button>Abort</button>
-        <button>Save</button>
-    </div>
+        <input type="color" id="clrSelect" />
+        <input type="range" min="0" max="255" id="rngBrightness" />
+        <button id="btnSetLight">Set Light</button>
     <script src="app.js"></script>
 </body>
 

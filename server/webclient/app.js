@@ -1,129 +1,96 @@
 NODEID = "68c63aa78e4a";
 
-function fetchScenes()
+function setBrightnessToRecomended()
 {
-	console.log("Fetching Scenes");
-	var fetcher = new XMLHttpRequest();
-	    fetcher.addEventListener("load", parseScenes );
-	    fetcher.open( "GET", "/scenes?node=".concat( NODEID ) );
-	    fetcher.send();
+	document.getElementById( "rngBrightness" ).value = calculateRecommendeBrightness();
 }
 
-function parseScenes()
+function calculateRecommendeBrightness()
 {
-	console.log("Parsing Scenes");
-	scenes = JSON.parse( this.responseText );
-	console.log(scenes);
+	var selected_color = document.getElementById( "clrSelect" ).value;
+	var rgb_value = hexToRgb( selected_color );
+	var totalvalue = rgb_value.r + rgb_value.g + rgb_value.b;
 
-	selectedScene = null;
-	document.getElementsByName("sceneselector").forEach(function(item) {
-		if( item.checked ) { selectedScene = item.value; }
-	});
-	console.log( selectedScene );
+	var recommended_brightness = ( 256 / totalvalue ) * 256;
+	if( recommended_brightness > 255 ) {
+		return 255;
+	} else { return recommended_brightness }
+}
 
-	killAllChildren( document.getElementById( "scenelist" ) );
-
-	for( var scene in scenes )
+function testForRecommendedBrightness()
+{
+	var selectedbrightness = parseInt(document.getElementById( "rngBrightness" ).value)
+	if(selectedbrightness > calculateRecommendeBrightness() )
 	{
-		var newScene = document.createElement("li");
-		var radio = document.createElement("input");
-			radio.type = 'radio';
-			radio.name = 'sceneselector';
-			radio.value = scene;
-			radio.addEventListener( "change", verifySendSceneButton );
-
-		if( scene == selectedScene )
+		var change = confirm("You've tried to set higher than recomended brightness, revert?");
+		if( change == true )
 		{
-			radio.checked = true;
-		} else {
-			radio.checked = false;
+			setBrightnessToRecomended();
 		}
-
-		var editbutton = document.createElement("button");
-			editbutton.addEventListener( "click", editScene );
-			editbutton.appendChild( document.createTextNode("Edit") );
-
-		var deletebutton = document.createElement("button");
-			deletebutton.addEventListener( "click", verifyDeleteScene );
-			deletebutton.appendChild( document.createTextNode( "Delete" ) );
-
-		newScene.appendChild( radio );
-		newScene.appendChild( document.createTextNode( scene ) );
-		newScene.appendChild( editbutton );
-		newScene.appendChild( deletebutton );
-		document.getElementById("scenelist").appendChild( newScene );
 	}
-	verifySendSceneButton();
 }
 
-function editScene()
+function btnSetLight_Click()
 {
-	console.log( this.parentElement.querySelector("input").value );
+	var hexcolor = document.getElementById( "clrSelect" ).value;
+	var rgb_value = hexToRgb( hexcolor );
+	var brightness = parseInt( document.getElementById( "rngBrightness" ).value );
+
+	rgb_value.r = Math.round( ( rgb_value.r / 255 ) * brightness );
+	rgb_value.g = Math.round( ( rgb_value.g / 255 ) * brightness );
+	rgb_value.b = Math.round( ( rgb_value.b / 255 ) * brightness );
+
+	var payload = rgb_value;
+	payload.node = NODEID;
+	payload.brightness = brightness;
+
+	var sender = new XMLHttpRequest();
+	    sender.open( "POST", "/setlight" );
+	    sender.send( JSON.stringify( payload ) );
 }
 
-function verifyDeleteScene()
+function hexToRgb(hex)
 {
-	console.log( this.parentElement.querySelector("input").value );
+	var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
 }
 
-function verifySendSceneButton()
+function loadColor()
 {
-	selectedScene = null;
-	document.getElementsByName("sceneselector").forEach(function(item) {
-		if( item.checked ) { selectedScene = item.value; }
-	});
+	var retriever = new XMLHttpRequest()
+	retriever.addEventListener( "load", callback_loadColor );
+	retriever.open( "GET", "/nodes" );
+	retriever.send();
+}
 
-	if( selectedScene == null )
+function callback_loadColor()
+{
+	if( this.status != 200 )
 	{
-		document.getElementById("btnPushScene").disabled = true;
-	} else {
-		document.getElementById("btnPushScene").disabled = false;
+		throw "Bad Form!";
 	}
+	nodes = JSON.parse(this.responseText);
+	node = nodes[NODEID];
+	document.getElementById( "rngBrightness" ).value = node.brightness;
+	var factor = 255 / node.brightness;
+	document.getElementById( "clrSelect" ).value = rgbToHex(node.pixels[0] * factor ,node.pixels[1] * factor ,node.pixels[2] * factor );
 }
 
-function sendScene()
-{
-	selectedScene = null;
-	document.getElementsByName("sceneselector").forEach(function(item) {
-		if( item.checked ) { selectedScene = item.value; }
-	});
-
-	if( selectedScene == null )
-	{
-		throw "No scene selected!";
-	}
-
-	var newScene = new XMLHttpRequest();
-	newScene.open( "POST", "/setscene" );
-	newScene.send( JSON.stringify( { node: NODEID, scene: selectedScene } ) );
-
-	setTimeout( hidefeedback, 1000 );
-	document.getElementById( "btnPushScene" ).disabled = true;
-}
-document.getElementById( "btnPushScene" ).addEventListener( "click", sendScene );
-
-function sendBrightness()
-{
-	document.getElementById( "btnPushBrightness" ).disabled = true;
-	brightness = parseInt(document.getElementById("rngBrightness").value);
-	var newBrightness = new XMLHttpRequest();
-		newBrightness.open( "POST", "/setbrightness" );
-		newBrightness.send( JSON.stringify( { node: NODEID, brightness: brightness } ) );
-	setTimeout( function() { document.getElementById( "btnPushBrightness" ).disabled = false;}, 1000 );
-}
-document.getElementById( "btnPushBrightness" ).addEventListener( "click", sendBrightness );
-
-function hidefeedback()
-{
-	verifySendSceneButton();
+function componentToHex(c) {
+    var hex = Math.round(c).toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
 }
 
-function killAllChildren( domElement )
-{
-	while( domElement.firstChild )
-	{
-		domElement.removeChild( domElement.firstChild );
-	}
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
 }
 
-setTimeout( fetchScenes, 0 );
+document.getElementById( "clrSelect" ).addEventListener( "change", setBrightnessToRecomended );
+document.getElementById( "rngBrightness" ).addEventListener( "change", testForRecommendedBrightness );
+document.getElementById( "btnSetLight" ).addEventListener( "click", btnSetLight_Click );
+calculateRecommendeBrightness();
+loadColor();

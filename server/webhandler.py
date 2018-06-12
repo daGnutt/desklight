@@ -19,11 +19,7 @@ def do_get(request):
     parsedurl = urllib.parse.urlparse(request.path)
 
     if parsedurl.path == '/nodes':
-        get_beacons(request)
-        return
-
-    if parsedurl.path == '/scenes':
-        get_scenes(request)
+        get_nodes(request)
         return
 
     servefile(request)
@@ -31,39 +27,23 @@ def do_get(request):
 
 def do_post(request):
     """Parses and handles all POST-requests"""
-    if request.path == '/setscene':
-        post_setscene(request)
+    if request.path == '/setlight':
+        post_setlight(request)
         return
-    
-    if request.path == '/setbrightness':
-        post_setbrightness(request)
+
+    if request.path == '/lightoff':
+        post_lightoff(request)
+        return
+
+    if request.path == '/lighton':
+        post_lighton(request)
         return
 
     send_response(request, 500, 'NOT IMPLEMENTED')
 
-def get_beacons(request):
+def get_nodes(request):
     """Retrives beacons from the callback getBeacons and sends it to the api client"""
     send_response(request, 200, json.dumps(GET_BEACONS())) #pylint: disable=E1102
-    return
-
-def get_scenes(request):
-    """Reads the scenes from the JSON and returns it to the api client."""
-    parsedurl = urllib.parse.urlparse(request.path)
-    querystring = urllib.parse.parse_qs(parsedurl.query)
-
-    if 'node' not in querystring:
-        send_response(request, 500, 'Missing node')
-        return
-
-    with open("scenes.json", mode="r") as file_pointer:
-        scenes = file_pointer.read()
-
-    scenes = json.loads(scenes)
-    if querystring['node'][0] not in scenes:
-        send_response(request, 500, 'Node not found')
-        return
-
-    send_response(request, 200, json.dumps(scenes[querystring['node'][0]]))
     return
 
 def servefile(request):
@@ -84,25 +64,13 @@ def servefile(request):
     request.end_headers()
     return
 
-def post_setscene(request):
-    """Sends the supplied scene to the supplied node."""
+def post_setlight(request):
+    """Sets the lights to the supplied color"""
     postdata = request.rfile.read(int(request.headers['content-length']))
     try:
         parsed = json.loads(postdata.decode())
     except json.decoder.JSONDecodeError:
-        send_response(request, 500, 'Could not parse incoming JSON data.')
-        return
-
-    try:
-        with open('scenes.json', mode='r') as file_pointer:
-            scenes = json.load(file_pointer)
-    except (json.decoder.JSONDecodeError, FileNotFoundError):
-        send_response(request, 500, 'Could not read scenes')
-        return
-
-    nodescenes = scenes[parsed['node']]
-    if not parsed['scene'] in nodescenes:
-        send_response(request, 500, 'Supplied scene is not available for node.')
+        send_response(request, 500, "Could not parse incoming JSON data.")
         return
 
     nodes = GET_BEACONS() #pylint: disable=E1102
@@ -112,22 +80,50 @@ def post_setscene(request):
         send_response(request, 500, 'Supplied node has not checked in.')
         return
 
-    pixelvalues = parsepayload(nodescenes[parsed['scene']])
-    binaryvalue = buildpayload(parsed['node'], pixelvalues)
+    pixelvalues = {}
+    for i in range(0, 180):
+        pixelvalues[i] = [parsed['r'],parsed['g'],parsed['b']]
 
-    result = send_tcp(node['ip_address'], node['tcp_port'], binaryvalue)
-    result = int.from_bytes(result, byteorder='big', signed=False)
+    node['pixels'] = [parsed['r'],parsed['g'],parsed['b']]
+    node['brightness'] = parsed['brightness']
 
-    send_response(request, 200, '%d' % result)
+    payload = buildpayload(parsed['node'], pixelvalues)
+    result = send_tcp(node['ip_address'], node['tcp_port'], payload)
+    resultcode = int.from_bytes(result, byteorder='big', signed=False)
+    send_response(request, 200, '%d' % resultcode)
     return
 
-def post_setbrightness(request):
-    """Sets the brightness on the supplied node."""
+def post_lightoff(request):
     postdata = request.rfile.read(int(request.headers['content-length']))
     try:
         parsed = json.loads(postdata.decode())
     except json.decoder.JSONDecodeError:
-        send_response(request, 500, 'Could not parse incoming JSON data.')
+        send_response(request, 500, "Could not parse incoming JSON data.")
+        return
+
+    nodes = GET_BEACONS() #pylint: disable=E1102
+    try:
+        node = nodes[parsed['node']]
+    except KeyError:
+        send_response(request, 500, 'Supplied node has not checked in.')
+        return    
+    
+    pixelvalues = {}
+    for i in range(0, 180):
+        pixelvalues[i] = [0,0,0]
+
+    payload = buildpayload(parsed['node'], pixelvalues)
+    result = send_tcp(node['ip_address'], node['tcp_port'], payload)
+    resultcode = int.from_bytes(result, byteorder='big', signed=False)
+    send_response(request, 200, '%d' % resultcode)
+    return
+
+def post_lighton(request):
+    postdata = request.rfile.read(int(request.headers['content-length']))
+    try:
+        parsed = json.loads(postdata.decode())
+    except json.decoder.JSONDecodeError:
+        send_response(request, 500, "Could not parse incoming JSON data.")
         return
 
     nodes = GET_BEACONS() #pylint: disable=E1102
@@ -136,14 +132,15 @@ def post_setbrightness(request):
     except KeyError:
         send_response(request, 500, 'Supplied node has not checked in.')
         return
-    payload  = binascii.unhexlify(parsed['node'])
-    payload += b'B'
-    payload += bytes([parsed['brightness']])
+    
+    pixelvalues = {}
+    for i in range(0, 180):
+        pixelvalues[i] = node['pixels']
 
+    payload = buildpayload(parsed['node'], pixelvalues)
     result = send_tcp(node['ip_address'], node['tcp_port'], payload)
-    result = int.from_bytes(result, byteorder='big', signed=False)
-
-    send_response(request, 200, '%d' % result)
+    resultcode = int.from_bytes(result, byteorder='big', signed=False)
+    send_response(request, 200, '%d' % resultcode)
     return
 
 def send_response(request, statuscode, message, optional_headers=None):
