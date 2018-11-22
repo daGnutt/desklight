@@ -72,6 +72,8 @@ void setup() {
   DEV_SERIAL_PRINTLN( "Connecting to " );
   DEV_SERIAL_PRINTLN( WIFI_SSID );
   WiFi.begin( WIFI_SSID, WIFI_PASSWORD );
+  //Changing WiFi-mode after conenction should not be needed any more
+  WiFi.mode(WIFI_STA); //Disables the unsecured WiFi otherwise announced. https://github.com/esp8266/Arduino/issues/529
   while( WiFi.status() != WL_CONNECTED ) {
     delay( 100 );
     DEV_SERIAL_PRINT( "." );
